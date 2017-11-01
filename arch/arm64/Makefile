@@ -101,12 +101,20 @@ KBUILD_AFLAGS	+= $(call cc-option,-mabi=lp64)
 ifeq ($(CONFIG_CPU_BIG_ENDIAN), y)
 KBUILD_CPPFLAGS += -mbig-endian
 AS		+= -EB
+ifeq ($(ld-name),gold)
+KBUILD_LDFLAGS	+= -EB -maarch64_elf64_be_vec
+else
 KBUILD_LDFLAGS	+= -EB $(call ld-option, -maarch64elfb, -maarch64linuxb)
+endif
 UTS_MACHINE	:= aarch64_be
 else
 KBUILD_CPPFLAGS += -mlittle-endian
 AS		+= -EL
+ifeq ($(ld-name),gold)
+KBUILD_LDFLAGS	+= -EL -maarch64_elf64_le_vec
+else
 KBUILD_LDFLAGS	+= -EL $(call ld-option, -maarch64elf, -maarch64linux)
+endif
 UTS_MACHINE	:= aarch64
 endif
 
