@@ -766,6 +766,12 @@ DISABLE_LTO	+= $(DISABLE_CFI)
 export DISABLE_CFI
 endif
 
+ifeq ($(ld-name),lld)
+KBUILD_LDFLAGS	+= --lto-O3
+else ifeq ($(ld-name),gold)
+KBUILD_LDFLAGS	+= --plugin-opt=O3
+endif
+
 ifndef CONFIG_CLANG_POLLY
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
