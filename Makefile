@@ -677,6 +677,30 @@ KBUILD_CFLAGS	+= $(call cc-option,-ffunction-sections,)
 KBUILD_CFLAGS	+= $(call cc-option,-fdata-sections,)
 endif
 
+ifdef CONFIG_CLANG_POLLY
+KBUILD_CFLAGS	+= -O3 \
+		   -mllvm -polly \
+		   -mllvm -polly-parallel -lgomp \
+		   -mllvm -polly-omp-backend=LLVM \
+		   -mllvm -polly-num-threads=0 \
+		   -mllvm -polly-scheduling=dynamic \
+		   -mllvm -polly-scheduling-chunksize=1 \
+		   -mllvm -polly-run-dce \
+		   -mllvm -polly-run-inliner \
+		   -mllvm -polly-opt-simplify-deps=no \
+		   -mllvm -polly-use-llvm-names=false \
+		   -mllvm -polly-detect-track-failures=false \
+		   -mllvm -polly-tiling=false \
+		   -mllvm -polly-rtc-max-parameters=7 \
+		   -mllvm -polly-overflow-tracking=never \
+		   -mllvm -polly-invariant-load-hoisting \
+		   -mllvm -polly-dependences-computeout=700000 \
+		   -mllvm -polly-vectorizer=stripmine \
+		   -mllvm -phi-node-folding-threshold=3 \
+		   -mllvm -loop-unswitch-threshold=150 \
+		   -fopenmp
+endif
+
 ifdef CONFIG_LTO_CLANG
 ifdef CONFIG_THINLTO
 lto-clang-flags := -flto=thin
@@ -742,6 +766,7 @@ DISABLE_LTO	+= $(DISABLE_CFI)
 export DISABLE_CFI
 endif
 
+ifndef CONFIG_CLANG_POLLY
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
@@ -749,6 +774,7 @@ ifdef CONFIG_PROFILE_ALL_BRANCHES
 KBUILD_CFLAGS	+= -O2 $(call cc-disable-warning,maybe-uninitialized,)
 else
 KBUILD_CFLAGS   += -O2
+endif
 endif
 endif
 

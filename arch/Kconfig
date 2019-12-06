@@ -506,6 +506,15 @@ config LD_DEAD_CODE_DATA_ELIMINATION
 	  sections (e.g., '.text.init'). Typically '.' in section names
 	  is used to distinguish them from label names / C identifiers.
 
+config CLANG_POLLY
+	bool "Use polyhedral optimizations and OpenMP level parallelism"
+	default y
+	help
+	  Polly is a high-level loop and data-locality optimizer and optimization
+	  infrastructure for LLVM. It uses an abstract mathematical representation
+	  based on integer polyhedra to analyze and optimize the memory access
+	  pattern of a program.
+
 config LTO
 	def_bool n
 
