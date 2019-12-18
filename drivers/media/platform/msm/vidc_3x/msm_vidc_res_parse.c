@@ -69,7 +69,6 @@ static inline enum imem_type read_imem_type(struct platform_device *pdev)
 	return is_compatible("qcom,msm-ocmem") ? IMEM_OCMEM :
 		is_compatible("qcom,msm-vmem") ? IMEM_VMEM :
 						IMEM_NONE;
-
 }
 
 static inline void msm_vidc_free_allowed_clocks_table(
@@ -678,7 +677,7 @@ static int msm_vidc_load_freq_table(struct msm_vidc_platform_resources *res)
 	 * logic to work, just sort it ourselves
 	 */
 	sort(res->load_freq_tbl, res->load_freq_tbl_size,
-			sizeof(*res->load_freq_tbl), cmp, NULL);
+			sizeof(*res->load_freq_tbl), cmp_load_freq_table, NULL);
 	return rc;
 }
 
