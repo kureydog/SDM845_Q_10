@@ -529,19 +529,15 @@ static int silfp_fb_callback(struct notifier_block *notif,
     /* If we aren't interested in this event, skip it immediately ... */
 	if (event == MSM_DRM_EARLY_EVENT_BLANK || event == MSM_DRM_ONSCREENFINGERPRINT_EVENT){
 	
-
 	if (evdata->id != MSM_DRM_PRIMARY_DISPLAY)
 	   return 0;
 
-
-
-
-    blank = *(int *)evdata->data;
+	blank = *(int *)evdata->data;
 	//printk(KERN_ERR"GZM FP1 blank = %d\n",blank);
 	//printk(KERN_ERR"GZM FP1 event = %ld\n",event);
 	//printk(KERN_ERR"GZM FP1 evdata->id = %d\n",evdata->id);
 
-    if (event == MSM_DRM_ONSCREENFINGERPRINT_EVENT ) {
+ 	if (event == MSM_DRM_ONSCREENFINGERPRINT_EVENT ) {
 		LOG_MSG_DEBUG(INFO_LOG, "[%s] UI ready enter\n", __func__);
 	//printk(KERN_ERR"GZM FP2 blank =%d\n",blank);	
 
