@@ -33,6 +33,7 @@
 #include <linux/ratelimit.h>
 #include <linux/pm_runtime.h>
 #include <linux/blk-cgroup.h>
+#include <linux/psi.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/block.h>
@@ -2177,6 +2178,10 @@ static bool high_prio_for_task(struct task_struct *t)
  */
 blk_qc_t submit_bio(struct bio *bio)
 {
+	bool workingset_read = false;
+	unsigned long pflags;
+	blk_qc_t ret;
+
 	/*
 	 * If it's a regular read/write or a barrier with data attached,
 	 * go through the normal accounting stuff before submission.
@@ -2192,6 +2197,8 @@ blk_qc_t submit_bio(struct bio *bio)
 		if (op_is_write(bio_op(bio))) {
 			count_vm_events(PGPGOUT, count);
 		} else {
+			if (bio_flagged(bio, BIO_WORKINGSET))
+				workingset_read = true;
 			task_io_account_read(bio->bi_iter.bi_size);
 			count_vm_events(PGPGIN, count);
 		}
@@ -2216,7 +2223,22 @@ blk_qc_t submit_bio(struct bio *bio)
 	if (high_prio_for_task(current))
 		bio->bi_opf |= REQ_FG;
 #endif
-	return generic_make_request(bio);
+
+	/*
+	 * If we're reading data that is part of the userspace
+	 * workingset, count submission time as memory stall. When the
+	 * device is congested, or the submitting cgroup IO-throttled,
+	 * submission can be a significant part of overall IO time.
+	 */
+	if (workingset_read)
+		psi_memstall_enter(&pflags);
+
+	ret = generic_make_request(bio);
+
+	if (workingset_read)
+		psi_memstall_leave(&pflags);
+
+	return ret;
 }
 EXPORT_SYMBOL(submit_bio);
 
@@ -3698,7 +3720,7 @@ int __init blk_dev_init(void)
  * them when printing them out.
  */
 ssize_t
-blk_latency_hist_show(char* name, struct io_latency_state *s, char *buf,
+blk_latency_hist_show(char *name, struct io_latency_state *s, char *buf,
 		int buf_size)
 {
 	int i;
@@ -3707,31 +3729,29 @@ blk_latency_hist_show(char* name, struct io_latency_state *s, char *buf,
 	int pct;
 	u_int64_t average;
 
-       num_elem = s->latency_elems;
-       if (num_elem > 0) {
-	       average = div64_u64(s->latency_sum, s->latency_elems);
-	       bytes_written += scnprintf(buf + bytes_written,
-			       buf_size - bytes_written,
-			       "IO svc_time %s Latency Histogram (n = %llu,"
-			       " average = %llu):\n", name, num_elem, average);
-	       for (i = 0;
-		    i < ARRAY_SIZE(latency_x_axis_us);
-		    i++) {
-		       elem = s->latency_y_axis[i];
-		       pct = div64_u64(elem * 100, num_elem);
-		       bytes_written += scnprintf(buf + bytes_written,
-				       PAGE_SIZE - bytes_written,
-				       "\t< %6lluus%15llu%15d%%\n",
-				       latency_x_axis_us[i],
-				       elem, pct);
-	       }
-	       /* Last element in y-axis table is overflow */
-	       elem = s->latency_y_axis[i];
-	       pct = div64_u64(elem * 100, num_elem);
-	       bytes_written += scnprintf(buf + bytes_written,
-			       PAGE_SIZE - bytes_written,
-			       "\t>=%6lluus%15llu%15d%%\n",
-			       latency_x_axis_us[i - 1], elem, pct);
+	num_elem = s->latency_elems;
+	if (num_elem > 0) {
+		average = div64_u64(s->latency_sum, s->latency_elems);
+		bytes_written += scnprintf(buf + bytes_written,
+			buf_size - bytes_written, "IO svc_time %s Latency"
+			" Histogram (n = %llu, average = %llu):\n", name,
+			num_elem, average);
+		for (i = 0; i < ARRAY_SIZE(latency_x_axis_us); i++) {
+			elem = s->latency_y_axis[i];
+			pct = div64_u64(elem * 100, num_elem);
+			bytes_written += scnprintf(buf + bytes_written,
+					PAGE_SIZE - bytes_written,
+					"\t< %6lluus%15llu%15d%%\n",
+					latency_x_axis_us[i],
+					elem, pct);
+		}
+		/* Last element in y-axis table is overflow */
+		elem = s->latency_y_axis[i];
+		pct = div64_u64(elem * 100, num_elem);
+		bytes_written += scnprintf(buf + bytes_written,
+				PAGE_SIZE - bytes_written,
+				"\t>=%6lluus%15llu%15d%%\n",
+				latency_x_axis_us[i - 1], elem, pct);
 	}
 
 	return bytes_written;
