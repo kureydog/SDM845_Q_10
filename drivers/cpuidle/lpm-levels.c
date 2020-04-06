@@ -67,9 +67,6 @@ struct lpm_cluster *lpm_root_node;
 static bool lpm_prediction = true;
 module_param_named(lpm_prediction, lpm_prediction, bool, 0664);
 
-static bool cluster_prediction = true;
-module_param_named(cluster_prediction, cluster_prediction, bool, 0664);
-
 static uint32_t bias_hyst;
 module_param_named(bias_hyst, bias_hyst, uint, 0664);
 static bool lpm_ipi_prediction = true;
@@ -482,7 +479,7 @@ static uint64_t lpm_cpuidle_predict(struct cpuidle_device *dev,
 	struct lpm_history *history = &per_cpu(hist, dev->cpu);
 	struct ipi_history *ipi_history = &per_cpu(cpu_ipi_history, dev->cpu);
 
-	if (!lpm_prediction || (!cpu->lpm_prediction && !cluster_prediction))
+	if (!lpm_prediction || !cpu->lpm_prediction)
 		return 0;
 
 	/*
