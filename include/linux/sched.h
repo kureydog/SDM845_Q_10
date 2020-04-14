@@ -3062,8 +3062,6 @@ extern void sched_exit(struct task_struct *p);
 #else
 static inline void sched_exit(struct task_struct *p) { }
 #endif
-
-
 extern void proc_caches_init(void);
 extern void flush_signals(struct task_struct *);
 extern void ignore_signals(struct task_struct *);
